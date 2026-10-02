@@ -1,0 +1,74 @@
+name: Setup - PostgreSQL + Liquibase + carga inicial
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Infra - PostgreSQL con Terraform"]
+    types:
+      - completed
+
+jobs:
+  setup-db:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    env:
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_SSLMODE: require
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Liquibase
+        run: |
+          curl -L https://github.com/liquibase/liquibase/releases/download/v4.29.2/liquibase-4.29.2.tar.gz -o liquibase.tar.gz
+          mkdir -p liquibase-bin
+          tar -xzf liquibase.tar.gz -C liquibase-bin --strip-components=1
+          echo "$(pwd)/liquibase-bin" >> $GITHUB_PATH
+
+      - name: Verify tools
+        run: |
+          psql --version
+          liquibase --version
+
+      - name: Create database schema with SQL
+        run: |
+          echo "Creando tablas con SQL..."
+          PGPASSWORD="${DB_PASSWORD}" psql "host=${DB_HOST} port=${DB_PORT} user=${DB_USER} dbname=${DB_NAME} sslmode=${DB_SSLMODE}" -f sql/01_create_tables.sql
+
+      - name: Run Liquibase migrations
+        run: |
+          echo "Ejecutando migraciones con Liquibase..."
+          liquibase \
+            --url="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+            --username="${DB_USER}" \
+            --password="${DB_PASSWORD}" \
+            --changeLogFile=liquibase/db.changelog-master.yaml \
+            update
+
+      - name: Load dataset file
+        run: |
+          echo "Carga del dataset desde data/raw/"
+          echo "Debe colocarse el archivo real en data/raw/ antes de ejecutar este workflow."
+          echo "Luego se ejecuta la carga con el nombre exacto del archivo descargado."
+          echo "Comando esperado:"
+          echo "PGPASSWORD=\"\${DB_PASSWORD}\" psql \"host=\${DB_HOST} port=\${DB_PORT} user=\${DB_USER} dbname=\${DB_NAME} sslmode=\${DB_SSLMODE}\" -f sql/02_load_data.sql"
+
+      - name: End status
+        run: echo "Setup completado. Ajustar la carga con el archivo real descargado del portal oficial."

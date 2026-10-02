@@ -1,0 +1,10 @@
+flowchart TD
+    A[GitHub Repo] --> B[GitHub Actions]
+    B --> C[Terraform]
+    C --> D[Cloud Provider]
+    D --> E[PostgreSQL]
+    B --> F[Liquibase]
+    F --> E
+    E --> G[Power BI]
+
+    B --> H[Workflows: infra.yml / setup.yml / deploy.yml]

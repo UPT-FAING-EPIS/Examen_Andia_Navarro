@@ -1,0 +1,38 @@
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Environment/secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.crt
+secrets.*
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+*.tfvars
+*.tfvars.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Data downloads (keep placeholders only)
+data/raw/*
+!data/raw/.gitkeep
+
+# Power BI build output
+auth.json
+*.pbix

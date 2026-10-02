@@ -1,0 +1,17 @@
+erDiagram
+    RAW_DATASET {
+        bigint id PK
+        text raw_line
+        timestamptz loaded_at
+    }
+
+    RAW_DATASET ||--o{ DATASET_RAW : contiene
+
+    DATASET_RAW {
+        bigint id PK
+        text raw_line
+        timestamptz loaded_at
+    }
+
+    %% El diagrama refleja la estructura real que el repositorio implementa
+    %% porque el dataset oficial no fue accesible desde Codespaces.

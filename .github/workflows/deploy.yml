@@ -1,0 +1,104 @@
+name: Deploy - Power BI
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publicar o actualizar el reporte Power BI'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  deploy-powerbi:
+    if: github.event.inputs.publish == 'true'
+    runs-on: ubuntu-latest
+
+    env:
+      POWERBI_TENANT_ID: ${{ secrets.POWERBI_TENANT_ID }}
+      POWERBI_CLIENT_ID: ${{ secrets.POWERBI_CLIENT_ID }}
+      POWERBI_CLIENT_SECRET: ${{ secrets.POWERBI_CLIENT_SECRET }}
+      POWERBI_WORKSPACE_ID: ${{ secrets.POWERBI_WORKSPACE_ID }}
+      POWERBI_REPORT_ID: ${{ secrets.POWERBI_REPORT_ID }}
+      POWERBI_DATASET_ID: ${{ secrets.POWERBI_DATASET_ID }}
+      POWERBI_PBIX_PATH: powerbi/reporte_acogimiento_residencial.pbix
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Power BI dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install msal requests
+
+      - name: Validate required secrets
+        run: |
+          test -n "$POWERBI_TENANT_ID" || { echo "POWERBI_TENANT_ID no configurado"; exit 1; }
+          test -n "$POWERBI_CLIENT_ID" || { echo "POWERBI_CLIENT_ID no configurado"; exit 1; }
+          test -n "$POWERBI_CLIENT_SECRET" || { echo "POWERBI_CLIENT_SECRET no configurado"; exit 1; }
+          test -n "$POWERBI_WORKSPACE_ID" || { echo "POWERBI_WORKSPACE_ID no configurado"; exit 1; }
+          test -n "$POWERBI_REPORT_ID" || { echo "POWERBI_REPORT_ID no configurado"; exit 1; }
+          echo "Secrets de Power BI validados."
+
+      - name: Authenticate to Microsoft Entra ID
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          import requests
+          from msal import ConfidentialClientApplication
+
+          tenant = os.environ['POWERBI_TENANT_ID']
+          client_id = os.environ['POWERBI_CLIENT_ID']
+          client_secret = os.environ['POWERBI_CLIENT_SECRET']
+
+          scope = ["https://analysis.windows.net/powerbi/api/.default"]
+          app = ConfidentialClientApplication(
+              client_id=client_id,
+              authority=f'https://login.microsoftonline.com/{tenant}',
+              client_credential=client_secret,
+          )
+          result = app.acquire_token_for_client(scopes=scope)
+          if 'access_token' not in result:
+              print(result)
+              sys.exit(1)
+
+          with open(os.environ.get('GITHUB_ENV', '/tmp/github_env'), 'a', encoding='utf-8') as fh:
+              fh.write(f"POWERBI_ACCESS_TOKEN={result['access_token']}\n")
+          print('Token de Power BI generado correctamente.')
+          PY
+
+      - name: Validate report package exists
+        run: |
+          if [ ! -f "$POWERBI_PBIX_PATH" ]; then
+            echo "No se encontró el archivo PBIX: $POWERBI_PBIX_PATH"
+            echo "Se debe crear el reporte visual en Power BI Desktop y guardarlo en esta ruta antes de ejecutar el deployment."
+            exit 1
+          fi
+
+      - name: Publish or update report
+        run: |
+          python - <<'PY'
+          import os, requests
+          token = os.environ['POWERBI_ACCESS_TOKEN']
+          workspace_id = os.environ['POWERBI_WORKSPACE_ID']
+          url = f'https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/imports?datasetDisplayName=DatasetBI'
+          headers = {'Authorization': f'Bearer {token}'}
+          files = {'file': open(os.environ['POWERBI_PBIX_PATH'], 'rb')}
+          response = requests.post(url, headers=headers, files=files, timeout=120)
+          print(response.status_code)
+          print(response.text[:1000])
+          if response.status_code not in (200, 201, 202):
+              raise SystemExit(1)
+          PY
+
+      - name: Deployment status
+        run: echo "Workflow preparado. La publicación final requiere que la cuenta tenga licencia de Power BI y acceso al workspace indicado."
