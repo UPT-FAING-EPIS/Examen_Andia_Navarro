@@ -67,9 +67,9 @@ La solución está compuesta por estos componentes:
 ```mermaid
 erDiagram
     RAW_DATASET {
-        bigint id PK
-        text raw_line
-        timestamptz loaded_at
+        BIGINT id PK
+        TEXT raw_line
+        TIMESTAMPTZ loaded_at
     }
 ```
 
@@ -77,10 +77,10 @@ erDiagram
 
 ```mermaid
 flowchart TD
-    A[GitHub Repo] --> B[GitHub Actions]
+    A[GitHub] --> B[GitHub Actions]
     B --> C[Terraform]
-    C --> D[Cloud Provider]
-    D --> E[PostgreSQL]
+    C --> D[Azure]
+    D --> E[PostgreSQL Flexible Server]
     B --> F[Liquibase]
     F --> E
     E --> G[Power BI]

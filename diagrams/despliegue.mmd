@@ -1,8 +1,8 @@
 flowchart TD
-    A[GitHub Repo] --> B[GitHub Actions]
+    A[GitHub] --> B[GitHub Actions]
     B --> C[Terraform]
-    C --> D[Cloud Provider]
-    D --> E[PostgreSQL]
+    C --> D[Azure]
+    D --> E[PostgreSQL Flexible Server]
     B --> F[Liquibase]
     F --> E
     E --> G[Power BI]

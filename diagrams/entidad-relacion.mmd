@@ -1,17 +1,10 @@
 erDiagram
     RAW_DATASET {
-        bigint id PK
-        text raw_line
-        timestamptz loaded_at
+        BIGINT id PK
+        TEXT raw_line
+        TIMESTAMPTZ loaded_at
     }
 
-    RAW_DATASET ||--o{ DATASET_RAW : contiene
-
-    DATASET_RAW {
-        bigint id PK
-        text raw_line
-        timestamptz loaded_at
-    }
-
-    %% El diagrama refleja la estructura real que el repositorio implementa
-    %% porque el dataset oficial no fue accesible desde Codespaces.
+    %% La estructura refleja la tabla real creada en PostgreSQL.
+    %% El dataset oficial no fue accesible desde Codespaces,
+    %% por lo que se mantiene una tabla de staging única y segura.
